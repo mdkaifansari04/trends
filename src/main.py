@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import hmac
 import json
+import re
+import uuid
 from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import parse_qs, urlparse
@@ -80,6 +83,12 @@ class Default(WorkerEntrypoint):
         if path == "/favicon.ico":
             return Response("")
 
+        if self._route_requires_db(path) and not self._has_db_binding():
+            return self._db_binding_error_response(path)
+
+        if method == "POST" and path == "/api/v1/posts/bulk":
+            return await self._handle_bulk_ingest(request)
+
         if method != "GET":
             return self._json_response({"error": "Method Not Allowed"}, status=405)
 
@@ -120,6 +129,92 @@ class Default(WorkerEntrypoint):
 
         return self._json_response({"error": "Not Found"}, status=404)
 
+    async def _handle_bulk_ingest(self, request):
+        ingest_api_key = getattr(self.env, "INGEST_API_KEY", "")
+        if not ingest_api_key:
+            return self._json_response({"error": "Ingest API key is not configured"}, status=500)
+
+        auth_value = self._header_value(request, "Authorization")
+        token = self._parse_bearer(auth_value)
+        if not token or not hmac.compare_digest(token, ingest_api_key):
+            return self._json_response({"error": "Unauthorized"}, status=401)
+
+        raw_body = await request.text()
+        if len(raw_body.encode("utf-8")) > 1_000_000:
+            return self._json_response({"error": "Payload Too Large"}, status=413)
+
+        try:
+            payload = json.loads(raw_body or "{}")
+        except json.JSONDecodeError:
+            return self._json_response({"error": "Invalid JSON body"}, status=400)
+
+        items = payload.get("items")
+        if not isinstance(items, list):
+            return self._json_response({"error": "`items` must be an array"}, status=400)
+        if len(items) > 100:
+            return self._json_response({"error": "`items` cannot exceed 100"}, status=400)
+
+        inserted = 0
+        updated = 0
+        failed = 0
+        errors: list[dict[str, Any]] = []
+        seen_external_ids: set[str] = set()
+
+        for index, item in enumerate(items):
+            normalized, error = self._validate_ingest_item(index, item)
+            if error is not None:
+                failed += 1
+                errors.append(error)
+                continue
+            assert normalized is not None
+
+            external_id = normalized["external_id"]
+            if external_id in seen_external_ids:
+                failed += 1
+                errors.append(
+                    {
+                        "index": index,
+                        "external_id": external_id,
+                        "error_code": "DUPLICATE_EXTERNAL_ID_IN_BATCH",
+                        "reason": "duplicate external_id in payload",
+                    }
+                )
+                continue
+            seen_external_ids.add(external_id)
+
+            try:
+                action, post_id = await self._upsert_post(normalized)
+                await self._replace_post_tags(post_id=post_id, tags=normalized["tags"])
+                if action == "inserted":
+                    inserted += 1
+                else:
+                    updated += 1
+            except ValueError as exc:
+                failed += 1
+                code = str(exc)
+                if code == "SLUG_CONFLICT":
+                    errors.append(
+                        {
+                            "index": index,
+                            "external_id": external_id,
+                            "error_code": "SLUG_CONFLICT",
+                            "reason": "slug already assigned to another post",
+                        }
+                    )
+                else:
+                    errors.append(
+                        {
+                            "index": index,
+                            "external_id": external_id,
+                            "error_code": "INGEST_VALIDATION_ERROR",
+                            "reason": str(exc),
+                        }
+                    )
+
+        return self._json_response(
+            {"success": True, "inserted": inserted, "updated": updated, "failed": failed, "errors": errors}
+        )
+
     async def _query_posts(self, date_value: str, limit: int, offset: int) -> list[dict[str, Any]]:
         sql = (
             "SELECT * FROM posts "
@@ -156,9 +251,111 @@ class Default(WorkerEntrypoint):
         result = await stmt.run()
         return _coerce_rows(result)
 
+    async def _run_exec(self, sql: str, *bindings: Any) -> None:
+        stmt = self.env.DB.prepare(sql)
+        if bindings:
+            stmt = stmt.bind(*bindings)
+        await stmt.run()
+
+    async def _upsert_post(self, payload: dict[str, Any]) -> tuple[str, str]:
+        existing = await self._run_rows_query(
+            "SELECT id, external_id, slug FROM posts WHERE external_id = ? LIMIT 1",
+            payload["external_id"],
+        )
+        slug_owner = await self._run_rows_query(
+            "SELECT id, external_id, slug FROM posts WHERE slug = ? LIMIT 1",
+            payload["slug"],
+        )
+
+        existing_row = existing[0] if existing else None
+        slug_owner_row = slug_owner[0] if slug_owner else None
+
+        if existing_row is None and slug_owner_row is not None and slug_owner_row["external_id"] != payload["external_id"]:
+            raise ValueError("SLUG_CONFLICT")
+
+        now_iso = self._now_iso_datetime()
+        if existing_row is not None:
+            if slug_owner_row is not None and slug_owner_row["id"] != existing_row["id"]:
+                raise ValueError("SLUG_CONFLICT")
+            await self._run_exec(
+                """
+                UPDATE posts
+                SET slug = ?, title = ?, excerpt = ?, content_markdown = ?,
+                    cover_image_url = ?, topic = ?, weight = ?, published_date = ?,
+                    published_at = ?, is_published = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                payload["slug"],
+                payload["title"],
+                payload.get("excerpt"),
+                payload["content_markdown"],
+                payload.get("cover_image_url"),
+                payload.get("topic"),
+                payload["weight"],
+                payload["published_date"],
+                payload.get("published_at"),
+                payload["is_published"],
+                now_iso,
+                existing_row["id"],
+            )
+            return ("updated", existing_row["id"])
+
+        post_id = str(uuid.uuid4())
+        await self._run_exec(
+            """
+            INSERT INTO posts (
+                id, external_id, slug, title, excerpt, content_markdown,
+                cover_image_url, topic, weight, published_date, published_at,
+                is_published, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            post_id,
+            payload["external_id"],
+            payload["slug"],
+            payload["title"],
+            payload.get("excerpt"),
+            payload["content_markdown"],
+            payload.get("cover_image_url"),
+            payload.get("topic"),
+            payload["weight"],
+            payload["published_date"],
+            payload.get("published_at"),
+            payload["is_published"],
+            now_iso,
+            now_iso,
+        )
+        return ("inserted", post_id)
+
+    async def _replace_post_tags(self, post_id: str, tags: list[tuple[str, str]]) -> None:
+        await self._run_exec("DELETE FROM post_tags WHERE post_id = ?", post_id)
+        now_iso = self._now_iso_datetime()
+        for tag_slug, tag_name in tags:
+            rows = await self._run_rows_query("SELECT id FROM tags WHERE slug = ? LIMIT 1", tag_slug)
+            if rows:
+                tag_id = rows[0]["id"]
+            else:
+                tag_id = str(uuid.uuid4())
+                await self._run_exec(
+                    "INSERT INTO tags (id, slug, name, created_at) VALUES (?, ?, ?, ?)",
+                    tag_id,
+                    tag_slug,
+                    tag_name,
+                    now_iso,
+                )
+            await self._run_exec(
+                "INSERT OR IGNORE INTO post_tags (post_id, tag_id, created_at) VALUES (?, ?, ?)",
+                post_id,
+                tag_id,
+                now_iso,
+            )
+
     @staticmethod
     def _today_iso() -> str:
         return datetime.now(timezone.utc).date().isoformat()
+
+    @staticmethod
+    def _now_iso_datetime() -> str:
+        return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
     @staticmethod
     def _query_int(params: dict[str, list[str]], key: str, default: int) -> int:
@@ -170,6 +367,161 @@ class Default(WorkerEntrypoint):
         except ValueError:
             return default
         return max(0, parsed)
+
+    @staticmethod
+    def _header_value(request: Any, key: str) -> str:
+        headers = getattr(request, "headers", None)
+        if headers is None:
+            return ""
+        if isinstance(headers, dict):
+            return str(headers.get(key) or headers.get(key.lower()) or "")
+        getter = getattr(headers, "get", None)
+        if callable(getter):
+            return str(getter(key) or getter(key.lower()) or "")
+        return ""
+
+    @staticmethod
+    def _parse_bearer(value: str) -> str:
+        if not value.startswith("Bearer "):
+            return ""
+        return value[7:].strip()
+
+    @staticmethod
+    def _normalize_slug(value: str) -> str:
+        return value.strip().lower()
+
+    @staticmethod
+    def _normalize_tag(value: str) -> tuple[str, str]:
+        cleaned = value.strip()
+        slug = re.sub(r"[^a-z0-9-]+", "-", cleaned.lower()).strip("-")
+        slug = re.sub(r"-{2,}", "-", slug)
+        return slug, cleaned
+
+    def _has_db_binding(self) -> bool:
+        env = getattr(self, "env", None)
+        return env is not None and hasattr(env, "DB")
+
+    @staticmethod
+    def _route_requires_db(path: str) -> bool:
+        return path == "/" or path.startswith("/posts/") or path.startswith("/api/v1/posts")
+
+    def _db_binding_error_response(self, path: str):
+        message = (
+            "DB binding is missing. Add a D1 binding named 'DB' in wrangler.toml under [[d1_databases]] "
+            "and apply migrations before running the Worker."
+        )
+        if path.startswith("/api/"):
+            return self._json_response({"error": message}, status=500)
+        return self._html_response(f"<h1>Configuration Error</h1><p>{message}</p>", status=500)
+
+    def _validate_ingest_item(self, index: int, item: Any) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+        required_fields = ("external_id", "slug", "title", "content_markdown", "weight", "published_date")
+        slug_re = re.compile(r"^[a-z0-9-]{1,180}$")
+        date_re = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+        if not isinstance(item, dict):
+            return None, {"index": index, "error_code": "INVALID_ITEM", "reason": "item must be an object"}
+
+        missing = [name for name in required_fields if item.get(name) in (None, "")]
+        if missing:
+            return None, {
+                "index": index,
+                "external_id": item.get("external_id"),
+                "error_code": "MISSING_FIELDS",
+                "reason": f"missing required fields: {', '.join(missing)}",
+            }
+
+        try:
+            weight = int(item["weight"])
+        except (TypeError, ValueError):
+            return None, {
+                "index": index,
+                "external_id": item.get("external_id"),
+                "error_code": "INVALID_WEIGHT",
+                "reason": "weight must be an integer",
+            }
+        if weight < 0 or weight > 1000:
+            return None, {
+                "index": index,
+                "external_id": item.get("external_id"),
+                "error_code": "INVALID_WEIGHT_RANGE",
+                "reason": "weight must be between 0 and 1000",
+            }
+
+        slug = self._normalize_slug(str(item["slug"]))
+        if not slug_re.fullmatch(slug):
+            return None, {
+                "index": index,
+                "external_id": item.get("external_id"),
+                "error_code": "INVALID_SLUG",
+                "reason": "slug must match [a-z0-9-] and be <= 180 chars",
+            }
+
+        published_date = str(item["published_date"]).strip()
+        if not date_re.fullmatch(published_date):
+            return None, {
+                "index": index,
+                "external_id": item.get("external_id"),
+                "error_code": "INVALID_PUBLISHED_DATE",
+                "reason": "published_date must be YYYY-MM-DD",
+            }
+
+        tags = item.get("tags", [])
+        if tags is None:
+            tags = []
+        if not isinstance(tags, list):
+            return None, {
+                "index": index,
+                "external_id": item.get("external_id"),
+                "error_code": "INVALID_TAGS",
+                "reason": "tags must be an array",
+            }
+        if len(tags) > 20:
+            return None, {
+                "index": index,
+                "external_id": item.get("external_id"),
+                "error_code": "TOO_MANY_TAGS",
+                "reason": "tags cannot exceed 20",
+            }
+
+        normalized_tags: list[tuple[str, str]] = []
+        seen_tag_slugs: set[str] = set()
+        for raw_tag in tags:
+            if not isinstance(raw_tag, str) or not raw_tag.strip():
+                return None, {
+                    "index": index,
+                    "external_id": item.get("external_id"),
+                    "error_code": "INVALID_TAG",
+                    "reason": "each tag must be a non-empty string",
+                }
+            tag_slug, tag_name = self._normalize_tag(raw_tag)
+            if not tag_slug:
+                return None, {
+                    "index": index,
+                    "external_id": item.get("external_id"),
+                    "error_code": "INVALID_TAG",
+                    "reason": "tag contains no valid characters",
+                }
+            if tag_slug in seen_tag_slugs:
+                continue
+            seen_tag_slugs.add(tag_slug)
+            normalized_tags.append((tag_slug, tag_name))
+
+        normalized = {
+            "external_id": str(item["external_id"]).strip(),
+            "slug": slug,
+            "title": str(item["title"]).strip(),
+            "excerpt": item.get("excerpt"),
+            "content_markdown": str(item["content_markdown"]),
+            "cover_image_url": item.get("cover_image_url"),
+            "topic": item.get("topic"),
+            "weight": weight,
+            "published_date": published_date,
+            "published_at": item.get("published_at"),
+            "is_published": 1 if item.get("is_published", True) else 0,
+            "tags": normalized_tags,
+        }
+        return normalized, None
 
     @staticmethod
     def _json_response(payload: dict[str, Any], status: int = 200):
