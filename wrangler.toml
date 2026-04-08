@@ -1,0 +1,8 @@
+name = "trends"
+main = "src/main.py"
+compatibility_date = "2026-04-08"
+compatibility_flags = ["python_workers"]
+workers_dev = true
+
+[observability.logs]
+enabled = true
