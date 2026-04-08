@@ -5,6 +5,7 @@ from urllib.parse import parse_qs, urlparse
 
 from src.db.client import get_connection
 from src.db.repository import PostRepository
+from src.routes.ingest import handle_bulk_ingest
 from src.routes.public import render_homepage, render_post_detail
 
 
@@ -47,13 +48,22 @@ def _query_int(query: dict[str, list[str]], name: str, default: int) -> int:
     return max(0, parsed)
 
 
-def handle_request(method: str, url: str, db_path: str, today: str | None = None) -> AppResponse:
+def handle_request(
+    method: str,
+    url: str,
+    db_path: str,
+    today: str | None = None,
+    headers: dict[str, str] | None = None,
+    body: str | None = None,
+    ingest_api_key: str = "",
+    max_items: int = 100,
+    max_body_bytes: int = 1_000_000,
+) -> AppResponse:
     parsed_url = urlparse(url)
     path = parsed_url.path
     query = parse_qs(parsed_url.query)
 
-    if method.upper() != "GET":
-        return _json_response(405, {"error": "Method Not Allowed"})
+    request_method = method.upper()
 
     date_value = _query_value(query, "date", today or date.today().isoformat())
     limit = _query_int(query, "limit", 20)
@@ -62,6 +72,20 @@ def handle_request(method: str, url: str, db_path: str, today: str | None = None
     conn = get_connection(db_path)
     repo = PostRepository(conn)
     try:
+        if request_method == "POST" and path == "/api/v1/posts/bulk":
+            status_code, payload = handle_bulk_ingest(
+                repo=repo,
+                headers=headers,
+                body=body,
+                ingest_api_key=ingest_api_key,
+                max_items=max_items,
+                max_body_bytes=max_body_bytes,
+            )
+            return _json_response(status_code, payload)
+
+        if request_method != "GET":
+            return _json_response(405, {"error": "Method Not Allowed"})
+
         if path == "/api/v1/health":
             return _json_response(200, {"status": "ok"})
 
