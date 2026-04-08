@@ -3,7 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#D02020" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>$title — Trends</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="/logo/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/logo/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/logo/favicon-16x16.png" />
+    <link rel="icon" type="image/x-icon" href="/logo/favicon.ico" />
+    <link rel="manifest" href="/logo/site.webmanifest" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&display=swap"
@@ -17,45 +25,35 @@
         background: #d02020;
         color: #fff;
       }
+      body {
+        overscroll-behavior-y: none;
+      }
     </style>
   </head>
-  <body class="min-h-screen bg-white text-stone-900 antialiased">
-    <!-- Navigation -->
+  <body class="min-h-screen bg-stone-50 text-stone-900 antialiased">
+    <!-- App bar -->
     <nav
-      class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-stone-100"
+      class="sticky top-0 z-50 bg-white border-b border-stone-200 shadow-sm"
     >
       <div
-        class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between"
+        class="max-w-2xl mx-auto px-4 h-12 flex items-center justify-between"
       >
-        <a href="/" class="flex items-center gap-2">
-          <img src="/images/logo.png" alt="Trends" class="w-6 h-6 rounded-md" />
-          <span class="font-semibold text-base tracking-tight">Trends</span>
+        <a href="/read" class="flex items-center gap-2">
+          <img
+            src="/images/logo.png"
+            alt="Trends"
+            class="w-5 h-5 rounded"
+          />
+          <span class="font-semibold text-sm tracking-tight">Trends</span>
         </a>
         <a
-          href="/"
-          class="text-xs font-semibold tracking-widest uppercase text-stone-500 hover:text-[#D02020] transition-colors"
-          >Home</a
+          href="/read"
+          class="text-xs font-semibold tracking-wide text-stone-400 hover:text-[#D02020] transition-colors"
+          >Feed</a
         >
       </div>
     </nav>
 
-    <main class="mx-auto max-w-3xl px-6 py-10">$content</main>
-
-    <!-- Footer -->
-    <footer class="border-t border-stone-100 py-8">
-      <div
-        class="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4"
-      >
-        <div class="flex items-center gap-2">
-          <img src="/images/logo.png" alt="Trends" class="w-5 h-5 rounded-md" />
-          <span class="text-sm font-semibold tracking-tight text-stone-400"
-            >Trends</span
-          >
-        </div>
-        <p class="text-xs text-stone-300">
-          © 2026 Trends. All rights reserved.
-        </p>
-      </div>
-    </footer>
+    <main class="mx-auto max-w-2xl px-4 py-6">$content</main>
   </body>
 </html>

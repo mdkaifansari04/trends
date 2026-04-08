@@ -1,27 +1,28 @@
-<a
-  href="/"
-  class="inline-flex items-center gap-1 text-sm text-[#D02020] hover:text-stone-900 transition-colors mb-6"
->
-  &larr; Back to feed
-</a>
-<article>
-  <header class="mb-8 pb-6 border-b border-stone-100">
-    <p class="text-xs font-bold tracking-widest uppercase text-[#D02020] mb-3">
-      $topic
-    </p>
-    <h1
-      class="text-3xl md:text-4xl font-semibold tracking-tight leading-tight mb-3"
+<div class="mb-4">
+  <a
+    href="/read"
+    class="inline-flex items-center gap-1 text-xs font-semibold tracking-wide text-stone-400 hover:text-[#D02020] transition-colors"
+  >
+    &larr; Back
+  </a>
+</div>
+<article class="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+  <div class="px-5 pt-5 pb-4 border-b border-stone-100">
+    <span
+      class="text-[10px] font-bold tracking-widest uppercase text-[#D02020]"
+      >$topic</span
     >
+    <h1 class="text-xl font-semibold tracking-tight leading-snug mt-1.5">
       $title
     </h1>
-    <p class="text-sm text-stone-400">$published_date</p>
-  </header>
-  <p class="text-lg text-stone-600 font-light leading-relaxed mb-8">$excerpt</p>
-  <div class="prose prose-stone max-w-none">
-    <pre
-      class="whitespace-pre-wrap rounded-xl bg-stone-50 border border-stone-100 p-6 text-sm text-stone-700 leading-relaxed"
+    <p class="text-xs text-stone-400 mt-1.5">$published_date</p>
+  </div>
+  <div class="px-5 py-4">
+    <p class="text-sm text-stone-500 leading-relaxed mb-4">$excerpt</p>
+    <div
+      class="whitespace-pre-wrap rounded-lg bg-stone-50 border border-stone-100 p-4 text-sm text-stone-700 leading-relaxed"
     >
-$content_markdown</pre
-    >
+      $content_markdown
+    </div>
   </div>
 </article>

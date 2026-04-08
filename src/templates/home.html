@@ -1,30 +1,30 @@
-<header class="mb-10">
-  <div class="flex items-center gap-3 mb-1">
-    <h1 class="text-4xl font-semibold tracking-tight">Trends</h1>
-    <span
-      class="text-xs font-bold tracking-widest uppercase bg-[#D02020] text-white px-2 py-0.5 rounded-full"
-      >Live</span
-    >
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-lg font-semibold tracking-tight">Your Feed</h1>
+    <p class="text-xs text-stone-400 mt-0.5">$date_value</p>
   </div>
-  <p class="text-sm text-stone-400">$date_value</p>
-</header>
+  <span
+    class="text-[10px] font-bold tracking-widest uppercase bg-[#D02020] text-white px-2 py-0.5 rounded-full"
+    >Live</span
+  >
+</div>
 
-<section class="mb-12">
-  <div class="flex items-center gap-2 mb-5">
-    <div class="w-1.5 h-1.5 bg-[#D02020] rounded-full"></div>
-    <h2 class="text-xs font-bold tracking-widest uppercase text-stone-400">
-      Trending Today
-    </h2>
-  </div>
-  <div class="space-y-4">$trending_cards</div>
+<section class="mb-8">
+  <p
+    class="text-[10px] font-bold tracking-widest uppercase text-[#D02020] mb-3 flex items-center gap-1.5"
+  >
+    <span class="w-1.5 h-1.5 bg-[#D02020] rounded-full inline-block"></span>
+    Trending
+  </p>
+  <div class="space-y-2">$trending_cards</div>
 </section>
 
 <section>
-  <div class="flex items-center gap-2 mb-5">
-    <div class="w-1.5 h-1.5 bg-stone-300 rounded-full"></div>
-    <h2 class="text-xs font-bold tracking-widest uppercase text-stone-400">
-      Latest Today
-    </h2>
-  </div>
-  <div class="space-y-4">$latest_cards</div>
+  <p
+    class="text-[10px] font-bold tracking-widest uppercase text-stone-400 mb-3 flex items-center gap-1.5"
+  >
+    <span class="w-1.5 h-1.5 bg-stone-300 rounded-full inline-block"></span>
+    Latest
+  </p>
+  <div class="space-y-2">$latest_cards</div>
 </section>
