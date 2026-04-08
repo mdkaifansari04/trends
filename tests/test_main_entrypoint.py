@@ -123,8 +123,8 @@ def test_posts_endpoint_and_homepage_render_with_entrypoint() -> None:
     assert posts_payload["items"][0]["slug"] == "cloud-news"
 
     assert home_response.status == 200
-    assert "Trending Today" in home_response.body
-    assert "Latest Today" in home_response.body
+    assert "Stop scrolling." in home_response.body
+    assert "Start shipping." in home_response.body
 
 
 def test_bulk_ingest_requires_auth_and_accepts_empty_payload() -> None:
@@ -162,7 +162,35 @@ def test_missing_db_binding_returns_configuration_error() -> None:
         INGEST_API_KEY: str = "secret-token"
 
     worker = Default(env=EnvWithoutDB())
-    response = asyncio.run(worker.fetch(FakeRequest(url="https://example.com/?date=2026-04-08")))
+    response = asyncio.run(worker.fetch(FakeRequest(url="https://example.com/api/v1/posts?date=2026-04-08")))
 
     assert response.status == 500
     assert "DB binding" in response.body
+
+
+def test_landing_page_does_not_require_db_binding() -> None:
+    @dataclass
+    class EnvWithoutDB:
+        INGEST_API_KEY: str = "secret-token"
+
+    worker = Default(env=EnvWithoutDB())
+    response = asyncio.run(worker.fetch(FakeRequest(url="https://example.com/")))
+
+    assert response.status == 200
+    assert "Tech news for builders" in response.body
+
+
+def test_legacy_trends_binding_is_accepted_for_queries() -> None:
+    @dataclass
+    class EnvWithLegacyBinding:
+        trends: FakeDB
+        INGEST_API_KEY: str = "secret-token"
+
+    worker = Default(env=EnvWithLegacyBinding(trends=FakeDB(posts=_seed_posts())))
+    response = asyncio.run(
+        worker.fetch(FakeRequest(url="https://example.com/api/v1/posts/trending?date=2026-04-08&limit=10"))
+    )
+
+    payload = json.loads(response.body)
+    assert response.status == 200
+    assert payload["items"][0]["slug"] == "cloud-news"

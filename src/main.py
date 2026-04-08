@@ -10,10 +10,10 @@ from urllib.parse import parse_qs, urlparse
 
 try:
     # Cloudflare Python Workers runtime (main = "src/main.py")
-    from routes.public import render_homepage, render_post_detail
+    from routes.public import render_homepage, render_landing_page, render_post_detail
 except ModuleNotFoundError:
     # Local test/runtime fallback.
-    from src.routes.public import render_homepage, render_post_detail
+    from src.routes.public import render_homepage, render_landing_page, render_post_detail
 
 try:
     from workers import Response, WorkerEntrypoint
@@ -83,6 +83,9 @@ class Default(WorkerEntrypoint):
         if path == "/favicon.ico":
             return Response("")
 
+        if path == "/":
+            return self._html_response(render_landing_page())
+
         if self._route_requires_db(path) and not self._has_db_binding():
             return self._db_binding_error_response(path)
 
@@ -113,12 +116,6 @@ class Default(WorkerEntrypoint):
             if post is None:
                 return self._json_response({"error": "Post Not Found"}, status=404)
             return self._json_response({"item": post})
-
-        if path == "/":
-            trending = await self._query_trending(date_value=date_value, limit=10)
-            latest = await self._query_posts(date_value=date_value, limit=20, offset=0)
-            html = render_homepage(trending=trending, latest=latest, date_value=date_value)
-            return self._html_response(html)
 
         if path.startswith("/posts/"):
             slug = path.replace("/posts/", "", 1)
@@ -245,14 +242,14 @@ class Default(WorkerEntrypoint):
         return rows[0]
 
     async def _run_rows_query(self, sql: str, *bindings: Any) -> list[dict[str, Any]]:
-        stmt = self.env.DB.prepare(sql)
+        stmt = self._db_binding().prepare(sql)
         if bindings:
             stmt = stmt.bind(*bindings)
         result = await stmt.run()
         return _coerce_rows(result)
 
     async def _run_exec(self, sql: str, *bindings: Any) -> None:
-        stmt = self.env.DB.prepare(sql)
+        stmt = self._db_binding().prepare(sql)
         if bindings:
             stmt = stmt.bind(*bindings)
         await stmt.run()
@@ -399,11 +396,21 @@ class Default(WorkerEntrypoint):
 
     def _has_db_binding(self) -> bool:
         env = getattr(self, "env", None)
-        return env is not None and hasattr(env, "DB")
+        return env is not None and (hasattr(env, "DB") or hasattr(env, "trends"))
+
+    def _db_binding(self):
+        env = getattr(self, "env", None)
+        if env is None:
+            raise AttributeError("DB")
+        if hasattr(env, "DB"):
+            return getattr(env, "DB")
+        if hasattr(env, "trends"):
+            return getattr(env, "trends")
+        raise AttributeError("DB")
 
     @staticmethod
     def _route_requires_db(path: str) -> bool:
-        return path == "/" or path.startswith("/posts/") or path.startswith("/api/v1/posts")
+        return path.startswith("/posts/") or path.startswith("/api/v1/posts")
 
     def _db_binding_error_response(self, path: str):
         message = (

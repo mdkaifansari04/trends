@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from src.routes import public
 from src.worker import handle_request
 
 
@@ -118,6 +119,23 @@ def test_homepage_renders_trending_and_latest_sections(seeded_db: Path) -> None:
     )
 
     assert response.status_code == 200
-    assert "Trending Today" in response.body
-    assert "Latest Today" in response.body
-    assert "Cloud News" in response.body
+    assert "Stop scrolling." in response.body
+    assert "Start shipping." in response.body
+
+
+def test_landing_route_works_without_opening_database(tmp_path: Path) -> None:
+    db_path = tmp_path / "missing.db"
+    response = handle_request(
+        method="GET",
+        url="https://example.com/",
+        db_path=str(db_path),
+        today="2026-04-08",
+    )
+    assert response.status_code == 200
+    assert "Tech news for builders" in response.body
+
+
+def test_render_homepage_falls_back_when_template_directory_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(public, "TEMPLATE_DIR", Path("/tmp/non-existent-template-dir"))
+    html = public.render_homepage(trending=[], latest=[], date_value="2026-04-08")
+    assert "Trending Today" in html

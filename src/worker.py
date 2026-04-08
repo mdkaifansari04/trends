@@ -6,7 +6,7 @@ from urllib.parse import parse_qs, urlparse
 from src.db.client import get_connection
 from src.db.repository import PostRepository
 from src.routes.ingest import handle_bulk_ingest
-from src.routes.public import render_homepage, render_post_detail
+from src.routes.public import render_landing_page, render_post_detail
 
 
 @dataclass
@@ -64,6 +64,8 @@ def handle_request(
     query = parse_qs(parsed_url.query)
 
     request_method = method.upper()
+    if request_method == "GET" and path == "/":
+        return _html_response(200, render_landing_page())
 
     date_value = _query_value(query, "date", today or date.today().isoformat())
     limit = _query_int(query, "limit", 20)
@@ -103,12 +105,6 @@ def handle_request(
             if post is None:
                 return _json_response(404, {"error": "Post Not Found"})
             return _json_response(200, {"item": post})
-
-        if path == "/":
-            trending_items = repo.list_trending_by_date(date_value=date_value, limit=10)
-            latest_items = repo.list_posts_by_date(date_value=date_value, limit=20, offset=0)
-            page_html = render_homepage(trending=trending_items, latest=latest_items, date_value=date_value)
-            return _html_response(200, page_html)
 
         if path.startswith("/posts/"):
             slug = path.replace("/posts/", "", 1)
