@@ -87,12 +87,18 @@ class FakeDB:
 @dataclass
 class FakeEnv:
     DB: FakeDB
+    INGEST_API_KEY: str = "secret-token"
 
 
 @dataclass
 class FakeRequest:
     url: str
     method: str = "GET"
+    headers: dict[str, str] | None = None
+    body_text: str = ""
+
+    async def text(self) -> str:
+        return self.body_text
 
 
 def test_health_endpoint_returns_ok_json() -> None:
@@ -119,3 +125,44 @@ def test_posts_endpoint_and_homepage_render_with_entrypoint() -> None:
     assert home_response.status == 200
     assert "Trending Today" in home_response.body
     assert "Latest Today" in home_response.body
+
+
+def test_bulk_ingest_requires_auth_and_accepts_empty_payload() -> None:
+    worker = Default(env=FakeEnv(DB=FakeDB(posts=[]), INGEST_API_KEY="secret-token"))
+
+    unauthorized = asyncio.run(
+        worker.fetch(
+            FakeRequest(
+                url="https://example.com/api/v1/posts/bulk",
+                method="POST",
+                headers={},
+                body_text='{"items": []}',
+            )
+        )
+    )
+    authorized = asyncio.run(
+        worker.fetch(
+            FakeRequest(
+                url="https://example.com/api/v1/posts/bulk",
+                method="POST",
+                headers={"Authorization": "Bearer secret-token"},
+                body_text='{"items": []}',
+            )
+        )
+    )
+
+    assert unauthorized.status == 401
+    assert authorized.status == 200
+    assert json.loads(authorized.body)["inserted"] == 0
+
+
+def test_missing_db_binding_returns_configuration_error() -> None:
+    @dataclass
+    class EnvWithoutDB:
+        INGEST_API_KEY: str = "secret-token"
+
+    worker = Default(env=EnvWithoutDB())
+    response = asyncio.run(worker.fetch(FakeRequest(url="https://example.com/?date=2026-04-08")))
+
+    assert response.status == 500
+    assert "DB binding" in response.body
