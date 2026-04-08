@@ -9,70 +9,68 @@ FALLBACK_TEMPLATES = {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#D02020" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>$title — Trends</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="/logo/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/logo/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/logo/favicon-16x16.png" />
+    <link rel="icon" type="image/x-icon" href="/logo/favicon.ico" />
+    <link rel="manifest" href="/logo/site.webmanifest" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <style>* { font-family: "EB Garamond", serif; } ::selection { background: #D02020; color: #fff; }</style>
+    <style>* { font-family: "EB Garamond", serif; } ::selection { background: #D02020; color: #fff; } body { overscroll-behavior-y: none; }</style>
   </head>
-  <body class="min-h-screen bg-white text-stone-900 antialiased">
-    <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-stone-100">
-      <div class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-        <a href="/" class="flex items-center gap-2">
-          <img src="/images/logo.png" alt="Trends" class="w-6 h-6 rounded-md" />
-          <span class="font-semibold text-base tracking-tight">Trends</span>
+  <body class="min-h-screen bg-stone-50 text-stone-900 antialiased">
+    <nav class="sticky top-0 z-50 bg-white border-b border-stone-200 shadow-sm">
+      <div class="max-w-2xl mx-auto px-4 h-12 flex items-center justify-between">
+        <a href="/read" class="flex items-center gap-2">
+          <img src="/images/logo.png" alt="Trends" class="w-5 h-5 rounded" />
+          <span class="font-semibold text-sm tracking-tight">Trends</span>
         </a>
-        <a href="/" class="text-xs font-semibold tracking-widest uppercase text-stone-500 hover:text-[#D02020] transition-colors">Home</a>
+        <a href="/read" class="text-xs font-semibold tracking-wide text-stone-400 hover:text-[#D02020] transition-colors">Feed</a>
       </div>
     </nav>
-    <main class="mx-auto max-w-3xl px-6 py-10">$content</main>
-    <footer class="border-t border-stone-100 py-8">
-      <div class="max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div class="flex items-center gap-2">
-          <img src="/images/logo.png" alt="Trends" class="w-5 h-5 rounded-md" />
-          <span class="text-sm font-semibold tracking-tight text-stone-400">Trends</span>
-        </div>
-        <p class="text-xs text-stone-300">&copy; 2026 Trends. All rights reserved.</p>
-      </div>
-    </footer>
+    <main class="mx-auto max-w-2xl px-4 py-6">$content</main>
   </body>
 </html>
 """,
-    "home.html": """<header class="mb-10">
-  <div class="flex items-center gap-3 mb-1">
-    <h1 class="text-4xl font-semibold tracking-tight">Trends</h1>
-    <span class="text-xs font-bold tracking-widest uppercase bg-[#D02020] text-white px-2 py-0.5 rounded-full">Live</span>
+    "home.html": """<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-lg font-semibold tracking-tight">Your Feed</h1>
+    <p class="text-xs text-stone-400 mt-0.5">$date_value</p>
   </div>
-  <p class="text-sm text-stone-400">$date_value</p>
-</header>
+  <span class="text-[10px] font-bold tracking-widest uppercase bg-[#D02020] text-white px-2 py-0.5 rounded-full">Live</span>
+</div>
 
-<section class="mb-12">
-  <div class="flex items-center gap-2 mb-5">
-    <div class="w-1.5 h-1.5 bg-[#D02020] rounded-full"></div>
-    <h2 class="text-xs font-bold tracking-widest uppercase text-stone-400">Trending Today</h2>
-  </div>
-  <div class="space-y-4">$trending_cards</div>
+<section class="mb-8">
+  <p class="text-[10px] font-bold tracking-widest uppercase text-[#D02020] mb-3 flex items-center gap-1.5">
+    <span class="w-1.5 h-1.5 bg-[#D02020] rounded-full inline-block"></span>
+    Trending
+  </p>
+  <div class="space-y-2">$trending_cards</div>
 </section>
 
 <section>
-  <div class="flex items-center gap-2 mb-5">
-    <div class="w-1.5 h-1.5 bg-stone-300 rounded-full"></div>
-    <h2 class="text-xs font-bold tracking-widest uppercase text-stone-400">Latest Today</h2>
-  </div>
-  <div class="space-y-4">$latest_cards</div>
+  <p class="text-[10px] font-bold tracking-widest uppercase text-stone-400 mb-3 flex items-center gap-1.5">
+    <span class="w-1.5 h-1.5 bg-stone-300 rounded-full inline-block"></span>
+    Latest
+  </p>
+  <div class="space-y-2">$latest_cards</div>
 </section>
 """,
-    "post_detail.html": """<a href="/" class="inline-flex items-center gap-1 text-sm text-[#D02020] hover:text-stone-900 transition-colors mb-6">
-  &larr; Back to feed
-</a>
-<article>
-  <header class="mb-8 pb-6 border-b border-stone-100">
-    <p class="text-xs font-bold tracking-widest uppercase text-[#D02020] mb-3">$topic</p>
-    <h1 class="text-3xl md:text-4xl font-semibold tracking-tight leading-tight mb-3">$title</h1>
-    <p class="text-sm text-stone-400">$published_date</p>
-  </header>
-  <p class="text-lg text-stone-600 font-light leading-relaxed mb-8">$excerpt</p>
-  <div class="prose prose-stone max-w-none">
-    <pre class="whitespace-pre-wrap rounded-xl bg-stone-50 border border-stone-100 p-6 text-sm text-stone-700 leading-relaxed">$content_markdown</pre>
+    "post_detail.html": """<div class="mb-4">
+  <a href="/read" class="inline-flex items-center gap-1 text-xs font-semibold tracking-wide text-stone-400 hover:text-[#D02020] transition-colors">&larr; Back</a>
+</div>
+<article class="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+  <div class="px-5 pt-5 pb-4 border-b border-stone-100">
+    <span class="text-[10px] font-bold tracking-widest uppercase text-[#D02020]">$topic</span>
+    <h1 class="text-xl font-semibold tracking-tight leading-snug mt-1.5">$title</h1>
+    <p class="text-xs text-stone-400 mt-1.5">$published_date</p>
+  </div>
+  <div class="px-5 py-4">
+    <p class="text-sm text-stone-500 leading-relaxed mb-4">$excerpt</p>
+    <div class="whitespace-pre-wrap rounded-lg bg-stone-50 border border-stone-100 p-4 text-sm text-stone-700 leading-relaxed">$content_markdown</div>
   </div>
 </article>
 """,
@@ -134,15 +132,19 @@ def _render_post_cards(posts: list[dict]) -> str:
     for post in posts:
         card_markup.append(
             """
-<article class="rounded-xl border border-stone-100 bg-white p-5 hover:border-[#D02020]/30 transition-colors">
-  <a href="/posts/{slug}" class="text-lg font-semibold text-stone-900 hover:text-[#D02020] transition-colors">{title}</a>
-  <p class="mt-2 text-sm text-stone-500 font-light leading-relaxed">{excerpt}</p>
-  <div class="mt-3 flex items-center gap-3">
-    <span class="text-xs font-bold tracking-widest uppercase text-[#D02020]">{topic}</span>
-    <span class="text-xs text-stone-300">·</span>
-    <span class="text-xs text-stone-400">Weight: {weight}</span>
+<a href="/posts/{slug}" class="block bg-white rounded-lg border border-stone-200 p-4 hover:border-[#D02020]/40 hover:shadow-sm transition-all">
+  <div class="flex items-start justify-between gap-3">
+    <div class="min-w-0 flex-1">
+      <p class="text-sm font-semibold text-stone-900 leading-snug">{title}</p>
+      <p class="text-xs text-stone-400 mt-1 line-clamp-2">{excerpt}</p>
+    </div>
   </div>
-</article>
+  <div class="mt-2.5 flex items-center gap-2">
+    <span class="text-[10px] font-bold tracking-widest uppercase text-[#D02020]">{topic}</span>
+    <span class="text-[10px] text-stone-300">\u00b7</span>
+    <span class="text-[10px] text-stone-400">score {weight}</span>
+  </div>
+</a>
             """.strip().format(
                 slug=post["slug"],
                 title=post["title"],
