@@ -6,7 +6,7 @@ from urllib.parse import parse_qs, urlparse
 from src.db.client import get_connection
 from src.db.repository import PostRepository
 from src.routes.ingest import handle_bulk_ingest
-from src.routes.public import render_landing_page, render_post_detail
+from src.routes.public import render_homepage, render_landing_page, render_post_detail
 
 
 @dataclass
@@ -36,6 +36,13 @@ def _query_value(query: dict[str, list[str]], name: str, default: str) -> str:
     values = query.get(name)
     if not values:
         return default
+    return values[0]
+
+
+def _optional_query_value(query: dict[str, list[str]], name: str) -> str | None:
+    values = query.get(name)
+    if not values:
+        return None
     return values[0]
 
 
@@ -90,6 +97,14 @@ def handle_request(
 
         if path == "/api/v1/health":
             return _json_response(200, {"status": "ok"})
+
+        if path == "/read":
+            explicit_date = _optional_query_value(query, "date")
+            page_date = explicit_date or repo.latest_published_date() or date_value
+            trending_items = repo.list_trending_by_date(date_value=page_date, limit=10)
+            latest_items = repo.list_posts_by_date(date_value=page_date, limit=20, offset=0)
+            page_html = render_homepage(trending=trending_items, latest=latest_items, date_value=page_date)
+            return _html_response(200, page_html)
 
         if path == "/api/v1/posts":
             items = repo.list_posts_by_date(date_value=date_value, limit=limit, offset=offset)

@@ -4,6 +4,9 @@ compatibility_date = "2026-04-08"
 compatibility_flags = ["python_workers"]
 workers_dev = true
 
+[assets]
+directory = "./static"
+
 # Required for post APIs and homepage queries.
 # Replace with your actual D1 database details.
 # [[d1_databases]]

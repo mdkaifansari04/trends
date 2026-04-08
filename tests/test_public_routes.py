@@ -123,6 +123,20 @@ def test_homepage_renders_trending_and_latest_sections(seeded_db: Path) -> None:
     assert "Start shipping." in response.body
 
 
+def test_read_page_renders_trending_and_latest_sections(seeded_db: Path) -> None:
+    response = handle_request(
+        method="GET",
+        url="https://example.com/read",
+        db_path=str(seeded_db),
+        today="2026-04-09",
+    )
+
+    assert response.status_code == 200
+    assert "Trending Today" in response.body
+    assert "Latest Today" in response.body
+    assert "Cloud News" in response.body
+
+
 def test_landing_route_works_without_opening_database(tmp_path: Path) -> None:
     db_path = tmp_path / "missing.db"
     response = handle_request(

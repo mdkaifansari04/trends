@@ -64,6 +64,13 @@ class FakeDB:
         return FakeStmt(self, sql)
 
     def run(self, sql: str, bindings: tuple) -> dict:
+        if "SELECT published_date FROM posts" in sql:
+            rows = [p for p in self.posts if p["is_published"] == 1]
+            rows.sort(key=lambda p: p["published_date"], reverse=True)
+            if not rows:
+                return {"results": []}
+            return {"results": [{"published_date": rows[0]["published_date"]}]}
+
         if "slug = ?" in sql:
             slug = bindings[0]
             matches = [p for p in self.posts if p["slug"] == slug and p["is_published"] == 1]
@@ -125,6 +132,16 @@ def test_posts_endpoint_and_homepage_render_with_entrypoint() -> None:
     assert home_response.status == 200
     assert "Stop scrolling." in home_response.body
     assert "Start shipping." in home_response.body
+
+
+def test_read_page_renders_trending_and_latest_sections() -> None:
+    worker = Default(env=FakeEnv(DB=FakeDB(posts=_seed_posts())))
+    response = asyncio.run(worker.fetch(FakeRequest(url="https://example.com/read")))
+
+    assert response.status == 200
+    assert "Trending Today" in response.body
+    assert "Latest Today" in response.body
+    assert "Cloud News" in response.body
 
 
 def test_bulk_ingest_requires_auth_and_accepts_empty_payload() -> None:

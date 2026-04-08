@@ -1,0 +1,64 @@
+{
+  "items": [
+    {
+      "external_id": "demo-001",
+      "slug": "cloudflare-python-workers-update",
+      "title": "Cloudflare Python Workers: Weekly Platform Update",
+      "excerpt": "What changed this week for Python Workers and D1 users.",
+      "content_markdown": "# Cloudflare Python Workers Update\n\nPython Workers now support a cleaner module workflow and improved D1 query ergonomics.\n\n## Why it matters\n\n- Faster iteration for small backend APIs.\n- Better visibility for edge logging.\n- Easier migration flow for schema changes.\n",
+      "topic": "Cloudflare",
+      "weight": 98,
+      "published_date": "2026-04-09",
+      "published_at": "2026-04-09T08:00:00Z",
+      "tags": ["Cloudflare", "Python", "D1"]
+    },
+    {
+      "external_id": "demo-002",
+      "slug": "tailwind-v4-design-systems",
+      "title": "Tailwind v4 Patterns for Fast Editorial UIs",
+      "excerpt": "A practical guide to building article-heavy pages with utility-first CSS.",
+      "content_markdown": "# Tailwind v4 for Editorial UIs\n\nTailwind remains a strong choice for content products because iteration speed is high.\n\n## Suggested layout\n\n1. Landing page for acquisition.\n2. Reader feed for discovery.\n3. Post detail page for deep reading.\n",
+      "topic": "Frontend",
+      "weight": 89,
+      "published_date": "2026-04-09",
+      "published_at": "2026-04-09T07:30:00Z",
+      "tags": ["Tailwind", "UI", "Design System"]
+    },
+    {
+      "external_id": "demo-003",
+      "slug": "d1-sql-indexing-for-news-feeds",
+      "title": "D1 Indexing Strategies for Trending Feeds",
+      "excerpt": "How to keep date-based and weight-based queries fast at scale.",
+      "content_markdown": "# D1 Feed Indexing\n\nA feed usually needs two query modes: latest and trending.\n\n- Latest: sort by published_at.\n- Trending: sort by weight then recency.\n\nIndexes should match those access patterns exactly.\n",
+      "topic": "Data",
+      "weight": 94,
+      "published_date": "2026-04-09",
+      "published_at": "2026-04-09T07:00:00Z",
+      "tags": ["D1", "SQL", "Performance"]
+    },
+    {
+      "external_id": "demo-004",
+      "slug": "productivity-patterns-for-dev-news",
+      "title": "How Builders Stay Updated Without Doomscrolling",
+      "excerpt": "A simple reading workflow for high-signal daily news.",
+      "content_markdown": "# A Better News Habit\n\nUse a fixed reading window, high-signal sources, and a concise daily shortlist.\n\nThis helps teams stay informed while protecting focus time.\n",
+      "topic": "Productivity",
+      "weight": 82,
+      "published_date": "2026-04-09",
+      "published_at": "2026-04-09T06:30:00Z",
+      "tags": ["Workflow", "Teams", "Productivity"]
+    },
+    {
+      "external_id": "demo-005",
+      "slug": "open-source-maintainers-and-release-velocity",
+      "title": "Release Velocity in Open Source Tooling",
+      "excerpt": "What fast release cycles mean for engineering teams adopting new tools.",
+      "content_markdown": "# Open Source Velocity\n\nFaster release cycles can improve adoption, but teams need stable upgrade practices.\n\nA lightweight changelog review process reduces integration risk.\n",
+      "topic": "Open Source",
+      "weight": 76,
+      "published_date": "2026-04-09",
+      "published_at": "2026-04-09T06:00:00Z",
+      "tags": ["Open Source", "Release Management"]
+    }
+  ]
+}

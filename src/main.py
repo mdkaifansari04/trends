@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlparse
 try:
     # Cloudflare Python Workers runtime (main = "src/main.py")
     from routes.public import render_homepage, render_landing_page, render_post_detail
+
 except ModuleNotFoundError:
     # Local test/runtime fallback.
     from src.routes.public import render_homepage, render_landing_page, render_post_detail
@@ -97,6 +98,18 @@ class Default(WorkerEntrypoint):
 
         if path == "/api/v1/health":
             return self._json_response({"status": "ok"})
+
+        if path == "/read":
+            date_values = params.get("date")
+            page_date = (
+                date_values[0]
+                if date_values and date_values[0]
+                else (await self._query_latest_published_date() or self._today_iso())
+            )
+            trending = await self._query_trending(date_value=page_date, limit=10)
+            latest = await self._query_posts(date_value=page_date, limit=20, offset=0)
+            html = render_homepage(trending=trending, latest=latest, date_value=page_date)
+            return self._html_response(html)
 
         date_value = params.get("date", [self._today_iso()])[0]
         limit = self._query_int(params, "limit", 20)
@@ -240,6 +253,17 @@ class Default(WorkerEntrypoint):
         if not rows:
             return None
         return rows[0]
+
+    async def _query_latest_published_date(self) -> str | None:
+        rows = await self._run_rows_query(
+            "SELECT published_date FROM posts WHERE is_published = 1 ORDER BY published_date DESC LIMIT 1"
+        )
+        if not rows:
+            return None
+        value = rows[0].get("published_date")
+        if value is None:
+            return None
+        return str(value)
 
     async def _run_rows_query(self, sql: str, *bindings: Any) -> list[dict[str, Any]]:
         stmt = self._db_binding().prepare(sql)
@@ -410,7 +434,7 @@ class Default(WorkerEntrypoint):
 
     @staticmethod
     def _route_requires_db(path: str) -> bool:
-        return path.startswith("/posts/") or path.startswith("/api/v1/posts")
+        return path == "/read" or path.startswith("/posts/") or path.startswith("/api/v1/posts")
 
     def _db_binding_error_response(self, path: str):
         message = (

@@ -40,6 +40,21 @@ class PostRepository:
         )
         return [self._row_to_dict(row) for row in cursor.fetchall()]
 
+    def latest_published_date(self) -> str | None:
+        cursor = self.conn.execute(
+            """
+            SELECT published_date
+            FROM posts
+            WHERE is_published = 1
+            ORDER BY published_date DESC
+            LIMIT 1
+            """
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return row["published_date"]
+
     def list_trending_by_date(self, date_value: str, limit: int) -> list[dict[str, Any]]:
         cursor = self.conn.execute(
             """

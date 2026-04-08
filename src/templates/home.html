@@ -1,14 +1,30 @@
-<header class="mb-8">
-  <h1 class="text-3xl font-bold tracking-tight">Trends</h1>
-  <p class="mt-2 text-sm text-slate-600">Date: $date_value</p>
+<header class="mb-10">
+  <div class="flex items-center gap-3 mb-1">
+    <h1 class="text-4xl font-semibold tracking-tight">Trends</h1>
+    <span
+      class="text-xs font-bold tracking-widest uppercase bg-[#D02020] text-white px-2 py-0.5 rounded-full"
+      >Live</span
+    >
+  </div>
+  <p class="text-sm text-stone-400">$date_value</p>
 </header>
 
-<section class="mb-8">
-  <h2 class="mb-4 text-xl font-semibold">Trending Today</h2>
-  <div class="space-y-3">$trending_cards</div>
+<section class="mb-12">
+  <div class="flex items-center gap-2 mb-5">
+    <div class="w-1.5 h-1.5 bg-[#D02020] rounded-full"></div>
+    <h2 class="text-xs font-bold tracking-widest uppercase text-stone-400">
+      Trending Today
+    </h2>
+  </div>
+  <div class="space-y-4">$trending_cards</div>
 </section>
 
 <section>
-  <h2 class="mb-4 text-xl font-semibold">Latest Today</h2>
-  <div class="space-y-3">$latest_cards</div>
+  <div class="flex items-center gap-2 mb-5">
+    <div class="w-1.5 h-1.5 bg-stone-300 rounded-full"></div>
+    <h2 class="text-xs font-bold tracking-widest uppercase text-stone-400">
+      Latest Today
+    </h2>
+  </div>
+  <div class="space-y-4">$latest_cards</div>
 </section>
