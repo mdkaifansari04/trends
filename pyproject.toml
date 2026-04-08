@@ -1,0 +1,16 @@
+[project]
+name = "trends"
+version = "0.1.0"
+description = "Cloudflare Python Worker based trends news app"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
