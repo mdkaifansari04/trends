@@ -7,18 +7,11 @@ workers_dev = true
 [assets]
 directory = "./static"
 
-# Required for post APIs and homepage queries.
-# Replace with your actual D1 database details.
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "trends"
-# database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-# migrations_dir = "migrations"
-
 [observability.logs]
 enabled = true
 
 [[d1_databases]]
-binding = "trends"
+binding = "DB"
 database_name = "trends"
 database_id = "b9c7682d-27db-4424-a567-f6099504116e"
+migrations_dir = "migrations"
