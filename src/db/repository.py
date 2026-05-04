@@ -55,6 +55,19 @@ class PostRepository:
             return None
         return row["published_date"]
 
+    def list_recent_posts(self, limit: int) -> list[dict[str, Any]]:
+        cursor = self.conn.execute(
+            """
+            SELECT *
+            FROM posts
+            WHERE is_published = 1
+            ORDER BY published_at DESC, created_at DESC, id ASC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+        return [self._row_to_dict(row) for row in cursor.fetchall()]
+
     def list_trending_by_date(self, date_value: str, limit: int) -> list[dict[str, Any]]:
         cursor = self.conn.execute(
             """
