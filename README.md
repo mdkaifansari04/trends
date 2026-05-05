@@ -6,8 +6,11 @@ Minimal Cloudflare Python Worker-based news reader.
 
 - Public read APIs for posts and trending
 - Landing page (`/`), reader page (`/read`), and post detail page (`/posts/:slug`)
+- Client-side bookmarks backed by `localStorage`
+- SEO routes (`/sitemap.xml`, `/rss.xml`, `/robots.txt`) and post metadata
+- Cache headers and request ID response headers on runtime routes
 - SQL migration for posts, tags, and post_tags
-- Pytest coverage for routing and ranking behavior
+- Pytest coverage for routing, ranking, ingest, bookmarks, SEO, and headers
 
 ## Run tests
 

@@ -83,10 +83,16 @@ class FakeDB:
             return {"results": rows[:limit]}
 
         if "ORDER BY published_at DESC" in sql:
-            date_value, limit, offset = bindings
-            rows = [p for p in self.posts if p["published_date"] == date_value and p["is_published"] == 1]
+            if "published_date = ?" in sql:
+                date_value, limit, offset = bindings
+                rows = [p for p in self.posts if p["published_date"] == date_value and p["is_published"] == 1]
+                rows.sort(key=lambda p: (p["published_at"], p["created_at"]), reverse=True)
+                return {"results": rows[offset : offset + limit]}
+
+            (limit,) = bindings
+            rows = [p for p in self.posts if p["is_published"] == 1]
             rows.sort(key=lambda p: (p["published_at"], p["created_at"]), reverse=True)
-            return {"results": rows[offset : offset + limit]}
+            return {"results": rows[:limit]}
 
         return {"results": []}
 
@@ -211,3 +217,36 @@ def test_legacy_trends_binding_is_accepted_for_queries() -> None:
     payload = json.loads(response.body)
     assert response.status == 200
     assert payload["items"][0]["slug"] == "cloud-news"
+
+
+def test_seo_routes_render_with_entrypoint() -> None:
+    worker = Default(env=FakeEnv(DB=FakeDB(posts=_seed_posts())))
+
+    sitemap = asyncio.run(worker.fetch(FakeRequest(url="https://example.com/sitemap.xml")))
+    rss = asyncio.run(worker.fetch(FakeRequest(url="https://example.com/rss.xml")))
+    robots = asyncio.run(worker.fetch(FakeRequest(url="https://example.com/robots.txt")))
+    detail = asyncio.run(worker.fetch(FakeRequest(url="https://example.com/posts/cloud-news")))
+
+    assert sitemap.status == 200
+    assert "<loc>https://example.com/posts/cloud-news</loc>" in sitemap.body
+    assert rss.status == 200
+    assert "<guid>https://example.com/posts/cloud-news</guid>" in rss.body
+    assert robots.status == 200
+    assert "Sitemap: https://example.com/sitemap.xml" in robots.body
+    assert '<link rel="canonical" href="https://example.com/posts/cloud-news" />' in detail.body
+
+
+def test_entrypoint_sets_cache_and_request_id_headers() -> None:
+    worker = Default(env=FakeEnv(DB=FakeDB(posts=_seed_posts())))
+    response = asyncio.run(
+        worker.fetch(
+            FakeRequest(
+                url="https://example.com/api/v1/posts?date=2026-04-08",
+                headers={"X-Request-ID": "req-entry"},
+            )
+        )
+    )
+
+    assert response.status == 200
+    assert response.headers["Cache-Control"] == "public, max-age=60, s-maxage=300"
+    assert response.headers["X-Request-ID"] == "req-entry"
